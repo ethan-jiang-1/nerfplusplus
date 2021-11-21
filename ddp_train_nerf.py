@@ -506,14 +506,15 @@ def ddp_train_nerf(rank, args):
         if global_step % args.i_img == 0 or global_step == start+1:
             #### critical: make sure each process is working on the same random image
             time0 = time.time()
-            idx = what_val_to_log % len(val_ray_samplers)
-            log_data = render_single_image(rank, args.world_size, models, val_ray_samplers[idx], args.chunk_size)
-            what_val_to_log += 1
-            dt = time.time() - time0
-            if rank == 0:    # only main process should do this
-                logger.info('Logged a random validation view in {} seconds'.format(dt))
-                if writer is not None:
-                    log_view_to_tb(writer, global_step, log_data, gt_img=val_ray_samplers[idx].get_img(), mask=None, prefix='val/')
+            if len(val_ray_samplers) > 0:
+                idx = what_val_to_log % len(val_ray_samplers)
+                log_data = render_single_image(rank, args.world_size, models, val_ray_samplers[idx], args.chunk_size)
+                what_val_to_log += 1
+                dt = time.time() - time0
+                if rank == 0:    # only main process should do this
+                    logger.info('Logged a random validation view in {} seconds'.format(dt))
+                    if writer is not None:
+                        log_view_to_tb(writer, global_step, log_data, gt_img=val_ray_samplers[idx].get_img(), mask=None, prefix='val/')
 
             time0 = time.time()
             idx = what_train_to_log % len(ray_samplers)
