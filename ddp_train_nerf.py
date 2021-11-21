@@ -10,10 +10,14 @@ from ddp_model import NerfNetWithAutoExpo
 import time
 from data_loader_split import load_data_split
 import numpy as np
-from tensorboardX import SummaryWriter
+
 from utils import img2mse, mse2psnr, img_HWC2CHW, colorize, TINY_NUMBER
 import logging
 import json
+
+NSW = False
+if NSW:
+    from tensorboardX import SummaryWriter
 
 
 logger = logging.getLogger(__package__)
@@ -241,6 +245,9 @@ def render_single_image(rank, world_size, models, ray_sampler, chunk_size):
 
 
 def log_view_to_tb(writer, global_step, log_data, gt_img, mask, prefix=''):
+    if writer is None:
+        return 
+
     rgb_im = img_HWC2CHW(torch.from_numpy(gt_img))
     writer.add_image(prefix + 'rgb_gt', rgb_im, global_step)
 
@@ -392,7 +399,10 @@ def ddp_train_nerf(rank, args):
     if rank == 0:
         tw_path = os.path.join(args.basedir, 'summaries', args.expname)
         print("tw_path", tw_path)
-        writer = SummaryWriter(tw_path)
+        if NSW:
+            writer = SummaryWriter(tw_path)
+        else:
+            writer = None
 
     # start training
     what_val_to_log = 0             # helper variable for parallel rendering of a image
@@ -480,7 +490,8 @@ def ddp_train_nerf(rank, args):
             logstr = '{} step: {} '.format(args.expname, global_step)
             for k in scalars_to_log:
                 logstr += ' {}: {:.6f}'.format(k, scalars_to_log[k])
-                writer.add_scalar(k, scalars_to_log[k], global_step)
+                if writer is not None:
+                    writer.add_scalar(k, scalars_to_log[k], global_step)
             logger.info(logstr)
 
         ### each process should do this; but only main process merges the results
@@ -493,7 +504,8 @@ def ddp_train_nerf(rank, args):
             dt = time.time() - time0
             if rank == 0:    # only main process should do this
                 logger.info('Logged a random validation view in {} seconds'.format(dt))
-                log_view_to_tb(writer, global_step, log_data, gt_img=val_ray_samplers[idx].get_img(), mask=None, prefix='val/')
+                if writer is not None:
+                    log_view_to_tb(writer, global_step, log_data, gt_img=val_ray_samplers[idx].get_img(), mask=None, prefix='val/')
 
             time0 = time.time()
             idx = what_train_to_log % len(ray_samplers)
@@ -502,7 +514,8 @@ def ddp_train_nerf(rank, args):
             dt = time.time() - time0
             if rank == 0:   # only main process should do this
                 logger.info('Logged a random training view in {} seconds'.format(dt))
-                log_view_to_tb(writer, global_step, log_data, gt_img=ray_samplers[idx].get_img(), mask=None, prefix='train/')
+                if writer is not None:
+                    log_view_to_tb(writer, global_step, log_data, gt_img=ray_samplers[idx].get_img(), mask=None, prefix='train/')
 
             del log_data
             torch.cuda.empty_cache()
