@@ -360,6 +360,10 @@ def ddp_train_nerf(rank, args):
         args.N_rand = 512
         args.chunk_size = 4096
 
+    print()
+    print("args", args)
+    print()
+
     ###### Create log dir and copy the config file
     if rank == 0:
         os.makedirs(os.path.join(args.basedir, args.expname), exist_ok=True)
@@ -378,6 +382,10 @@ def ddp_train_nerf(rank, args):
                                    try_load_min_depth=args.load_min_depth)
     val_ray_samplers = load_data_split(args.datadir, args.scene, split='validation',
                                        try_load_min_depth=args.load_min_depth, skip=args.testskip)
+    print()
+    print("ray_samplers", ray_samplers)
+    print("val_ray_samplers", val_ray_samplers)
+    print()
 
     # write training image names for autoexposure
     if args.optim_autoexpo:
