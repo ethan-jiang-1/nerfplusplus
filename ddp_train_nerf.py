@@ -15,7 +15,7 @@ from utils import img2mse, mse2psnr, img_HWC2CHW, colorize, TINY_NUMBER
 import logging
 import json
 
-NSW = False
+NSW = True
 if NSW:
     from tensorboardX import SummaryWriter
 
