@@ -390,7 +390,9 @@ def ddp_train_nerf(rank, args):
 
     ##### only main process should do the logging
     if rank == 0:
-        writer = SummaryWriter(os.path.join(args.basedir, 'summaries', args.expname))
+        tw_path = os.path.join(args.basedir, 'summaries', args.expname)
+        print("tw_path", tw_path)
+        writer = SummaryWriter(tw_path)
 
     # start training
     what_val_to_log = 0             # helper variable for parallel rendering of a image
